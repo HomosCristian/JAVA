@@ -1,0 +1,117 @@
+public static void scriereTXT(String filePath, List<Motocicleta> motociclete){
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(filePath))){
+            for(Motocicleta m:motociclete){
+                out.write(m.toString());
+                out.newLine();
+            }
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void scriereCSV(String filePath, List<Motocicleta> motociclete) {
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(filePath))) {
+            for (Motocicleta m : motociclete) {
+                out.write(m.getProducator() + "," + m.getModel() + "," + m.getCapacitate() + "," + m.getCaiPutere());
+                out.newLine();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void scriereJSON(String filePath, List<Motocicleta> motociclete){
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(filePath))){
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            gson.toJson(motociclete, out);
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public static List<Motocicleta> citireTXT(String filePath){
+        List<Motocicleta> rez = new ArrayList<>();
+        try (BufferedReader in = new BufferedReader(new FileReader(filePath))){
+            String line;
+            while ((line = in.readLine()) != null){
+                Motocicleta m = new Motocicleta();
+                String [] tokens = line.split(",");
+                m.setProducator(tokens[0].trim());
+                m.setModel(tokens[1].trim());
+                m.setCapacitate(Integer.parseInt(tokens[2].trim()));
+                m.setCaiPutere(Float.parseFloat(tokens[3].trim()));
+
+                rez.add(m);
+            }
+
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+        return rez;
+    }
+
+    public static List<Motocicleta> citireCSV(String filePath) throws FileNotFoundException{
+        List<Motocicleta> rez = new ArrayList<>();
+        try (BufferedReader in = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = in.readLine()) != null){
+                Motocicleta m = new Motocicleta();
+                String [] tokens = line.split(",");
+                m.setProducator(tokens[0].trim());
+                m.setModel(tokens[1].trim());
+                m.setCapacitate(Integer.parseInt(tokens[2].trim()));
+                m.setCaiPutere(Float.parseFloat(tokens[3].trim()));
+                rez.add(m);
+            }
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+        return rez;
+    }
+
+    public static List<Motocicleta> citireJSON(String filePath){
+        List<Motocicleta> rez = new ArrayList<>();
+        try (var file = new FileInputStream(filePath)) {
+            JSONTokener tokener = new JSONTokener(file);
+            JSONArray array = new JSONArray(tokener);
+            for(int i=0;i< array.length(); i++){
+                var objJSON = array.getJSONObject(i);
+                Motocicleta m = new Motocicleta();
+                m.setProducator(objJSON.getString("producator"));
+                m.setModel(objJSON.getString("model"));
+                m.setCapacitate(objJSON.getInt("capacitate"));
+                m.setCaiPutere(objJSON.getFloat("caiPutere"));
+                rez.add(m);
+            }
+        } catch (Exception ex){
+            System.err.println(ex);
+        }
+        return rez;
+    }
+
+    public static List<Motocicleta> citireDB(String dbPath){
+        List<Motocicleta> rez= new ArrayList<>();
+
+        try(Connection conn = DriverManager.getConnection(dbPath)){
+            if(conn != null){
+                System.out.println("Conexiune stabilita la " + dbPath + "!");
+                Statement st = conn.createStatement();
+                ResultSet rs = st.executeQuery("SELECT * FROM TABELA");
+
+                while(rs.next()){
+                    //Creez un obiect si INCEP DE LA 1!
+                    Motocicleta m = new Motocicleta();
+                    m.setProducator(rs.getString(1));
+                    m.setModel(rs.getString(2));
+                    m.setCapacitate(rs.getInt(3));
+                    m.setCaiPutere(rs.getFloat(4));
+
+                    rez.add(m);
+                }
+            }
+        }catch (SQLException e){
+            throw new RuntimeException(e);
+        }
+        return rez;
+    }
