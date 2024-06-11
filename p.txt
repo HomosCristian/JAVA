@@ -1,0 +1,90 @@
+import java.io.*;
+import java.sql.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class Main {
+    public static void main(String[] args) {
+        List<Program> programe = citirePrograme();
+        List<Candidat> candidati = citireCandidati();
+
+        // Cerinta 1: Afisarea programelor ordonate alfabetic
+        programe.stream()
+                .sorted(Comparator.comparing(Program::getDenumire))
+                .forEach(System.out::println);
+
+        // Cerinta 2: Afisarea top 3 candidati pentru fiecare program ordonat alfabetic
+        Map<Integer, List<Candidat>> candidatiPePrograme = candidati.stream()
+                .filter(c -> c.getNota() >= 6)
+                .sorted(Comparator.comparingDouble(Candidat::getNota).reversed())
+                .collect(Collectors.groupingBy(Candidat::getOptiune));
+
+        System.out.println();
+        System.out.println("Top 3 candidati pentru fiecare program:");
+
+        for (Program program : programe.stream().sorted(Comparator.comparing(Program::getDenumire)).collect(Collectors.toList())) {
+            List<Candidat> candidatiProgram = candidatiPePrograme.getOrDefault(program.getCod(), Collections.emptyList());
+            candidatiProgram.stream().limit(3).forEach(candidat ->
+                    System.out.println(program.getDenumire() + ", " + candidat.getNota() + ", " + candidat.getNume()));
+        }
+
+        // Cerinta 3: Generarea raportului in fisierul text admisi.txt pentru un cod specific
+        int codProgramSpecific = 101;  // specificati codul programului pentru care doriti sa generati raportul
+        genereazaRaportAdmitere(candidati, programe, codProgramSpecific);
+    }
+
+    public static List<Program> citirePrograme() {
+        List<Program> programe = new ArrayList<>();
+        String url = "jdbc:sqlite:S41_programe.db";
+
+        try (Connection conn = DriverManager.getConnection(url);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT * FROM Programe")) {
+            while (rs.next()) {
+                int cod = rs.getInt("cod");
+                String denumire = rs.getString("denumire");
+                int locuri = rs.getInt("locuri");
+                programe.add(new Program(cod, denumire, locuri));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return programe;
+    }
+
+    public static List<Candidat> citireCandidati() {
+        List<Candidat> candidati = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader("S41_studenti.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                String nume = parts[0].trim();
+                double nota = Double.parseDouble(parts[1].trim());
+                int optiune = Integer.parseInt(parts[2].trim());
+                String facultate = parts[3].trim();
+                candidati.add(new Candidat(nume, nota, optiune, facultate));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return candidati;
+    }
+
+    public static void genereazaRaportAdmitere(List<Candidat> candidati, List<Program> programe, int codProgram) {
+        List<Candidat> candidatiAdmis = candidati.stream()
+                .filter(c -> c.getOptiune() == codProgram && c.getNota() >= 6)
+                .sorted(Comparator.comparingDouble(Candidat::getNota).reversed())
+                .collect(Collectors.toList());
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("admisi.txt"))) {
+            for (Candidat candidat : candidatiAdmis) {
+                writer.write(String.format("%.2f - %s\n", candidat.getNota(), candidat.getNume()));
+            }
+            System.out.println("Raportul a fost generat cu succes in fisierul admisi.txt");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
